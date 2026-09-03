@@ -48,7 +48,7 @@ MIN_PIXELS = 28 * 28 * 64
 MAX_PIXELS = 28 * 28 * 640
 
 DEFAULT_EXPLAIN_MAX_FRAMES = 6
-DEFAULT_EXPLAIN_MAX_NEW_TOKENS = 256
+DEFAULT_EXPLAIN_MAX_NEW_TOKENS = 512  # open-ended Korean answers routinely passed 256
 
 # One-line summary written into the manifest at index time and shown as the dropdown tooltip.
 DEFAULT_DESCRIBE_MAX_FRAMES = 8

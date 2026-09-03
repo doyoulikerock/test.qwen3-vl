@@ -70,6 +70,7 @@ def cmd_ask(args: argparse.Namespace) -> None:
             start=args.start,
             end=args.end,
             max_frames=args.max_frames,
+            max_new_tokens=args.max_new_tokens,
         )
     except pipeline.IndexMissing as e:
         print(e)
@@ -86,6 +87,7 @@ def cmd_ask(args: argparse.Namespace) -> None:
                 "sampled_t": [f["t_sec"] for f in result.frames],
                 "question": result.question,
                 "answer": result.answer,
+                "truncated": result.truncated,
                 "timings": result.timings,
                 "total_seconds": result.total_seconds,
             },
@@ -94,6 +96,9 @@ def cmd_ask(args: argparse.Namespace) -> None:
     else:
         print()
         print(result.answer)
+        if result.truncated:
+            print(f"\n[잘림] max-new-tokens {args.max_new_tokens} 제한에 걸려 답변이 중간에 끊겼습니다. "
+                  f"--max-new-tokens 를 올려 다시 물어보세요.")
         _print_timings(result.timings, result.total_seconds)
 
 
@@ -197,6 +202,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="the question to ask; defaults to a people-count question, but any question works",
     )
     p_ask.add_argument("--max-frames", type=int, default=config.DEFAULT_EXPLAIN_MAX_FRAMES)
+    p_ask.add_argument(
+        "--max-new-tokens", type=int, default=config.DEFAULT_EXPLAIN_MAX_NEW_TOKENS,
+        help="answer length budget; the answer is cut off mid-sentence when it runs out "
+             "(the run says so when that happens)",
+    )
     p_ask.add_argument("--json", action="store_true")
     p_ask.set_defaults(func=cmd_ask)
 

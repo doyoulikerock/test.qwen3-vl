@@ -322,6 +322,9 @@ class Handler(BaseHTTPRequestHandler):
                 start=(req.get("start") or None),
                 end=(req.get("end") or None),
                 max_frames=int(req.get("max_frames") or config.DEFAULT_EXPLAIN_MAX_FRAMES),
+                max_new_tokens=int(
+                    req.get("max_new_tokens") or config.DEFAULT_EXPLAIN_MAX_NEW_TOKENS
+                ),
                 log=log,
                 report=report,
             )
@@ -329,6 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                 "video_path": video_path,
                 "question": result.question,
                 "answer": result.answer,
+                "truncated": result.truncated,
                 "start": result.start,
                 "end": result.end,
                 "timings": result.timings,
@@ -556,6 +560,12 @@ INDEX_HTML = r"""<!doctype html>
             border-left: 4px solid var(--accent2);
             border-radius: 8px; padding: 14px 16px; margin-bottom: 18px; white-space: pre-wrap; }
   #answer.off { display: none; }
+  /* A clipped answer looks exactly like a finished one, so mark it in the answer box too. */
+  #answer.cut { border-left-color: #f0c674; margin-bottom: 8px; }
+  #cut { margin-bottom: 18px; padding: 8px 12px; border-radius: 8px; font-size: 13px;
+         color: #f0c674; border: 1px solid rgba(240,198,116,.45);
+         background: rgba(240,198,116,.10); }
+  #cut.off { display: none; }
   #gridlabel { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
   #grid { display: grid; gap: 16px;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
@@ -619,6 +629,7 @@ INDEX_HTML = r"""<!doctype html>
       <label>start <input type="text" id="astart" class="tc" placeholder="00:03:10"></label>
       <label>end <input type="text" id="aend" class="tc" placeholder="00:03:30"></label>
       <label>max-frames <input type="number" id="amax" value="6" min="1" max="24"></label>
+      <label>max-tokens <input type="number" id="atok" value="512" min="64" max="2048" step="64"></label>
       <span>범위를 비우면 영상 전체를 대상으로 질문합니다.</span>
     </div>
   </form>
@@ -648,6 +659,7 @@ INDEX_HTML = r"""<!doctype html>
   <div id="prog" class="off"></div>
   <div id="timing" class="off"></div>
   <div id="answer" class="off"></div>
+  <div id="cut" class="off"></div>
   <div id="gridlabel"></div>
   <div id="grid"></div>
 </main>
@@ -762,7 +774,7 @@ let polling = null;
 
 async function submit(url, body) {
   $('grid').innerHTML = ''; $('gridlabel').textContent = '';
-  $('answer').className = 'off'; $('timing').className = 'off';
+  $('answer').className = 'off'; $('cut').className = 'off'; $('timing').className = 'off';
   try {
     await post(url, body);
     poll();
@@ -846,8 +858,12 @@ function showAskResult(data) {
   videoPath = data.video_path;
   items = data.frames;
   renderTimings(data.timings, data.total_seconds);
-  $('answer').className = '';
+  $('answer').className = data.truncated ? 'cut' : '';
   $('answer').textContent = data.answer;
+  $('cut').className = data.truncated ? '' : 'off';
+  $('cut').textContent = data.truncated
+    ? `답변이 max-tokens ${$('atok').value} 제한에 걸려 중간에 끊겼습니다 — max-tokens 를 올려 다시 물어보세요.`
+    : '';
   $('status').className = '';
   $('status').textContent =
     `${data.start.toFixed(1)}s – ${data.end.toFixed(1)}s 구간에서 ${data.frames.length}개 프레임을 근거로 답했습니다.`;
@@ -927,6 +943,7 @@ $('f-ask').addEventListener('submit', e => {
     start: $('astart').value.trim() || null,
     end: $('aend').value.trim() || null,
     max_frames: +$('amax').value,
+    max_new_tokens: +$('atok').value,
   });
 });
 

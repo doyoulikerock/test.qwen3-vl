@@ -144,6 +144,7 @@ class AskResult:
     start: float
     end: float
     frames: list[dict] = field(default_factory=list)  # {t_sec, frame, thumb} — absolute paths
+    truncated: bool = False  # answer ran out of max_new_tokens, so it ends mid-sentence
     timings: list[dict] = field(default_factory=list)
     total_seconds: float = 0.0
 
@@ -395,7 +396,7 @@ def _describe(out_dir: Path, frame_paths: list[str], sw: Stopwatch, log: Callabl
         with sw.stage("explainer load"):
             explainer.load()
         with sw.stage(f"describe ({len(sampled)} frames)", "describe"):
-            answer = explainer.ask(
+            answer, truncated = explainer.ask(
                 config.DESCRIBE_PROMPT, sampled,
                 max_new_tokens=config.DEFAULT_DESCRIBE_MAX_NEW_TOKENS,
             )
@@ -408,6 +409,8 @@ def _describe(out_dir: Path, frame_paths: list[str], sw: Stopwatch, log: Callabl
             explainer.release()
 
     desc = " ".join(answer.split())
+    if truncated:
+        log(f"  (설명이 {config.DEFAULT_DESCRIBE_MAX_NEW_TOKENS} 토큰 제한에 걸려 끝이 잘렸습니다)")
     log(f"  description: {desc}")
     return desc
 
@@ -550,6 +553,7 @@ def run_ask(
     start: str | float | None = None,
     end: str | float | None = None,
     max_frames: int = config.DEFAULT_EXPLAIN_MAX_FRAMES,
+    max_new_tokens: int = config.DEFAULT_EXPLAIN_MAX_NEW_TOKENS,
     log: Callable[[str], None] = print,
     report: Callable[[dict], None] | None = None,
 ) -> AskResult:
@@ -598,10 +602,14 @@ def run_ask(
     with sw.stage("explainer load"):
         explainer.load()
     with sw.stage(f"generate ({len(frames)} frames)", "generate"):
-        answer = explainer.ask(question, [f["frame"] for f in frames])
+        answer, truncated = explainer.ask(
+            question, [f["frame"] for f in frames], max_new_tokens=max_new_tokens
+        )
     with sw.stage("explainer release"):
         explainer.release()
 
+    if truncated:
+        log(f"  (답변이 max-new-tokens {max_new_tokens} 제한에 걸려 끝이 잘렸습니다 — 값을 올려 다시 물어보세요)")
     log(f"  total: {sw.total:.2f}s")
     return AskResult(
         question=question,
@@ -609,6 +617,7 @@ def run_ask(
         start=t_start,
         end=t_end,
         frames=frames,
+        truncated=truncated,
         timings=sw.as_list(),
         total_seconds=sw.total,
     )

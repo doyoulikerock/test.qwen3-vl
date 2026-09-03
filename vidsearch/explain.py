@@ -1,10 +1,20 @@
 import gc
+from typing import NamedTuple
 
 import torch
 from qwen_vl_utils import process_vision_info
 from transformers import AutoModelForImageTextToText, AutoProcessor
 
 from . import config
+
+
+class Answer(NamedTuple):
+    """A generated answer plus whether generation stopped on the max_new_tokens budget
+    instead of on an end-of-turn token — i.e. whether `text` is cut off mid-sentence.
+    Callers surface that, because a silently clipped answer reads like a real one."""
+
+    text: str
+    truncated: bool
 
 
 class Explainer:
@@ -43,7 +53,7 @@ class Explainer:
         prompt: str,
         image_paths: list[str],
         max_new_tokens: int = config.DEFAULT_EXPLAIN_MAX_NEW_TOKENS,
-    ) -> str:
+    ) -> Answer:
         """Send all image_paths together as one multi-image turn and return the model's
         text answer. Sharing one turn (rather than asking per-frame) lets the model reason
         across frames, e.g. "the highest count across these is N"."""
@@ -80,4 +90,14 @@ class Explainer:
         output_text = self._processor.batch_decode(
             trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
         )
-        return output_text[0].strip()
+        return Answer(output_text[0].strip(), self._hit_budget(trimmed[0], max_new_tokens))
+
+    def _hit_budget(self, generated, max_new_tokens: int) -> bool:
+        """True when generation ran out of budget rather than ending its turn: the full
+        budget was spent and the last token is not one of the model's stop tokens (the
+        decoded text drops those, so length alone cannot tell the two cases apart)."""
+        if len(generated) < max_new_tokens:
+            return False
+        eos = self._model.generation_config.eos_token_id
+        stops = {eos} if isinstance(eos, int) else set(eos or ())
+        return int(generated[-1]) not in stops
