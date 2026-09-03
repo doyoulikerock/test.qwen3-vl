@@ -46,3 +46,6 @@ MIN_CLIP_TAIL_SEC = 1.0  # skip a trailing window shorter than this
 
 MIN_PIXELS = 28 * 28 * 64
 MAX_PIXELS = 28 * 28 * 640
+
+DEFAULT_EXPLAIN_MAX_FRAMES = 6
+DEFAULT_EXPLAIN_MAX_NEW_TOKENS = 256

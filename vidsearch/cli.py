@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from . import config, hf_cache, media, store
+from .media import parse_timecode
 from .segment import ScoredFrame, merge_segments
 
 
@@ -219,6 +220,56 @@ def cmd_search(args: argparse.Namespace) -> None:
         _print_table(results, video_path)
 
 
+def cmd_ask(args: argparse.Namespace) -> None:
+    video_path = str(Path(args.video).resolve())
+    out_dir = store.video_data_dir(video_path)
+    if not store.index_exists(out_dir):
+        print(f"No index at {out_dir}. Run `vidsearch index {args.video}` first.")
+        return
+
+    _, meta, manifest = store.load_index(out_dir)
+    # Both bounds are optional: omitting them asks the question about the whole video.
+    start = parse_timecode(args.start) if args.start is not None else 0.0
+    end = (
+        parse_timecode(args.end)
+        if args.end is not None
+        else max(manifest.get("duration", 0.0), meta[-1]["t_sec"] if meta else 0.0)
+    )
+    if end <= start:
+        print("--end must be after --start")
+        return
+
+    in_range = [m for m in meta if start <= m["t_sec"] <= end]
+    if not in_range:
+        print(f"No indexed frames between {start:.2f}s and {end:.2f}s.")
+        return
+
+    step = max(1, len(in_range) // args.max_frames)
+    sampled = in_range[::step][: args.max_frames]
+    frame_paths = [str(out_dir / m["frame"]) for m in sampled]
+    sampled_t = [m["t_sec"] for m in sampled]
+    print(f"Sampling {len(frame_paths)} frame(s) from {start:.2f}s-{end:.2f}s: {[f'{t:.1f}s' for t in sampled_t]}")
+
+    offline = hf_cache.enable_offline_if_cached([config.EXPLAIN_MODEL_ID])
+    if not offline:
+        print("(explain model not cached yet — this run needs network to download it)")
+
+    from .explain import Explainer  # deferred: heavy torch/transformers import
+
+    explainer = Explainer()
+    answer = explainer.ask(args.question, frame_paths)
+    explainer.release()
+
+    if args.json:
+        print(json.dumps(
+            {"start": start, "end": end, "sampled_t": sampled_t, "question": args.question, "answer": answer},
+            ensure_ascii=False, indent=2,
+        ))
+    else:
+        print()
+        print(answer)
+
+
 def _segment_to_dict(s) -> dict:
     return {
         "start": s.start,
@@ -279,6 +330,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_search.add_argument("--top", type=int, default=10)
     p_search.add_argument("--json", action="store_true")
     p_search.set_defaults(func=cmd_search)
+
+    p_ask = sub.add_parser(
+        "ask",
+        help="Ask Qwen3-VL-4B-Instruct an open-ended question about an already-indexed video, "
+             "optionally limited to a time range (e.g. how many people, what are they doing, what color is X)",
+    )
+    p_ask.add_argument("video")
+    p_ask.add_argument("--start", default=None, help="range start: seconds (203) or HH:MM:SS(.ms); defaults to the start of the video")
+    p_ask.add_argument("--end", default=None, help="range end: seconds (210) or HH:MM:SS(.ms); defaults to the end of the video")
+    p_ask.add_argument(
+        "--question",
+        default="이 프레임들은 한 영상 구간에서 뽑은 것이다. 사람이 최대 몇 명까지 동시에 보이는지 숫자로 먼저 답하고, "
+                 "근거를 한 문장으로 설명해줘.",
+        help="the question to ask; defaults to a people-count question, but any question works",
+    )
+    p_ask.add_argument("--max-frames", type=int, default=config.DEFAULT_EXPLAIN_MAX_FRAMES)
+    p_ask.add_argument("--json", action="store_true")
+    p_ask.set_defaults(func=cmd_ask)
 
     return p
 

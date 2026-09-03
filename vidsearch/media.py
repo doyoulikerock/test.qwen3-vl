@@ -94,6 +94,19 @@ def frame_timestamp(index: int, fps: float) -> float:
     return (index - 1) / fps
 
 
+def parse_timecode(s: str) -> float:
+    """Accept either plain seconds ("203", "202.5") or "HH:MM:SS(.ms)" / "MM:SS" and
+    return seconds, so `ask --start`/`--end` can take the same timecode format the
+    `search` output prints."""
+    if ":" not in s:
+        return float(s)
+    parts = [float(p) for p in s.split(":")]
+    while len(parts) < 3:
+        parts.insert(0, 0.0)
+    h, m, sec = parts
+    return h * 3600 + m * 60 + sec
+
+
 def extract_clips(
     video_path: str,
     out_dir: Path,
