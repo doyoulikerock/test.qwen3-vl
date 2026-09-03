@@ -1,0 +1,12 @@
+# virtual environment
+.venv/
+
+# per-video generated indexes (frames, thumbs, clips, embeddings) — large binaries, not source
+data/
+
+# python
+__pycache__/
+*.pyc
+
+# stray run logs
+*.log
