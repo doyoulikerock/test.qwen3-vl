@@ -39,6 +39,7 @@ class Embedder:
         frame_paths: list[str],
         batch_size: int = 4,
         truncate_dim: int | None = None,
+        show_progress_bar: bool = True,
     ) -> np.ndarray:
         self.load()
         for bs in _batch_size_fallback(batch_size):
@@ -47,7 +48,7 @@ class Embedder:
                     frame_paths,
                     batch_size=bs,
                     normalize_embeddings=True,
-                    show_progress_bar=True,
+                    show_progress_bar=show_progress_bar,
                     truncate_dim=truncate_dim,
                     # Adopt the reference (qwen-vl-utils) per-frame pixel cap for video/clip inputs —
                     # becomes the forced default in transformers v5.22 anyway. Verified on our own

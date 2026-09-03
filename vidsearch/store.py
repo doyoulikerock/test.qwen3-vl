@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -88,3 +89,32 @@ def load_clip_index(out_dir: Path) -> tuple[np.ndarray, list[dict]]:
 
 def clip_index_exists(out_dir: Path) -> bool:
     return (out_dir / "clip_embeddings.npy").exists() and (out_dir / "clip_meta.jsonl").exists()
+
+
+def _remove(out_dir: Path, names: list[str]) -> list[str]:
+    removed = []
+    for name in names:
+        path = out_dir / name
+        if path.is_dir():
+            shutil.rmtree(path)
+            removed.append(name + "/")
+        elif path.exists():
+            path.unlink()
+            removed.append(name)
+    return removed
+
+
+def clear_frame_index(out_dir: Path) -> list[str]:
+    """Delete the frame index and the images it was built from.
+
+    Rebuilding with different options must start from an empty directory: extraction
+    collects its output by globbing (media._run_ffmpeg_extract), so frames left over from
+    a run at a different --fps/--width would be folded into the new index and silently
+    desynchronize meta.jsonl from the embeddings.
+    """
+    return _remove(out_dir, ["frames", "thumbs", "embeddings.npy", "meta.jsonl"])
+
+
+def clear_clip_index(out_dir: Path) -> list[str]:
+    """Same, for the motion/clip index."""
+    return _remove(out_dir, ["clips", "clip_embeddings.npy", "clip_meta.jsonl"])

@@ -49,3 +49,12 @@ MAX_PIXELS = 28 * 28 * 640
 
 DEFAULT_EXPLAIN_MAX_FRAMES = 6
 DEFAULT_EXPLAIN_MAX_NEW_TOKENS = 256
+
+# One-line summary written into the manifest at index time and shown as the dropdown tooltip.
+DEFAULT_DESCRIBE_MAX_FRAMES = 8
+DEFAULT_DESCRIBE_MAX_NEW_TOKENS = 160
+DESCRIBE_PROMPT = (
+    "이 이미지들은 한 영상에서 시간 순서대로 고르게 뽑은 프레임이다. "
+    "이 영상이 어떤 영상인지 두 문장 이내로 간결하게 설명해줘. "
+    "장소, 등장하는 사람/사물, 주요 활동을 포함하고, 프레임 번호나 시각은 언급하지 마."
+)
