@@ -4,6 +4,7 @@
 
 Routes:
     GET  /                      the single-page UI
+    GET  /guide                 guide.html — what the models do and where their limits come from
     GET  /api/videos            {workspace, videos: indexed + unindexed files in that dir}
     POST /api/search            {video, query, ...} -> ranked segments + stage timings
     POST /api/ask               {video, question, start, end, ...} -> answer + sampled frames
@@ -134,6 +135,10 @@ class Job:
 
 _job = Job()
 
+# The VLM primer served at /guide. Kept as a file rather than another INDEX_HTML-sized
+# string literal, and read per request so editing the doc needs no server restart.
+_GUIDE_PATH = Path(__file__).resolve().parent / "guide.html"
+
 _MAX_BODY = 64 * 1024
 _CHUNK = 1 << 20        # 1 MiB per write while streaming a file
 _MAX_RANGE = 8 << 20    # cap one 206 response at 8 MiB
@@ -220,6 +225,8 @@ class Handler(BaseHTTPRequestHandler):
         path = unquote(urlparse(self.path).path)
         if path == "/":
             self._send(200, INDEX_HTML.encode("utf-8"), "text/html; charset=utf-8")
+        elif path == "/guide":
+            self._serve_guide()
         elif path == "/api/videos":
             self._send_json(200, {"workspace": str(_scan_dir), "videos": _videos()})
         elif path == "/api/job":
@@ -410,6 +417,15 @@ class Handler(BaseHTTPRequestHandler):
         print(f"index: [{video_id}] {opts}")
         self._submit("index", video_id, work)
 
+    def _serve_guide(self) -> None:
+        try:
+            body = _GUIDE_PATH.read_bytes()
+        except OSError:
+            self._send_json(404, {"error": f"guide is missing: {_GUIDE_PATH}"})
+            return
+        # no-cache so a re-read after editing guide.html is what the browser actually shows
+        self._send(200, body, "text/html; charset=utf-8", {"Cache-Control": "no-cache"})
+
     def _serve_media(self, rel: str) -> None:
         target = (config.DATA_ROOT / rel).resolve()
         root = config.DATA_ROOT.resolve()
@@ -531,6 +547,11 @@ INDEX_HTML = r"""<!doctype html>
   .modes button.on { background: var(--accent); color: #06101f; border-color: var(--accent);
                      font-weight: 600; }
   .modes button.play { color: var(--accent2); }
+  /* Pushed to the far right: it leaves the app rather than acting on the selection. */
+  .modes a.guide { margin-left: auto; align-self: center; color: var(--muted);
+                   text-decoration: none; border: 1px solid var(--line);
+                   border-radius: 6px; padding: 5px 14px; }
+  .modes a.guide:hover { color: var(--accent); border-color: var(--line-strong); }
   form.panel { display: block; border: 1px solid var(--line); border-radius: 8px;
                padding: 12px 14px; margin-top: 12px; background: var(--bg); }
   form.panel.off { display: none; }
@@ -621,6 +642,8 @@ INDEX_HTML = r"""<!doctype html>
     <select id="video" style="margin-left:8px"></select>
     <button id="playsrc" class="play" title="선택한 원본 영상 재생">▶ play</button>
     <button id="m-index" title="인덱스를 지우고 옵션을 바꿔 다시 생성">⚙ index</button>
+    <a class="guide" href="/guide" target="_blank" rel="noopener"
+       title="VLM 개념 가이드 — 비주얼 토큰, 프레임 샘플링, 모델별 한계가 어디서 오는지">ⓘ guide</a>
   </div>
 
   <form id="f-search">

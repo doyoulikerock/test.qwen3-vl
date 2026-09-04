@@ -1,0 +1,1324 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프레임에서 토큰까지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    --ground: #F4F7F5;
+    --surface: #FFFFFF;
+    --surface-2: #EAF1ED;
+    --ink: #12201C;
+    --ink-muted: #556963;
+    --hairline: #D5E1DB;
+    --hairline-strong: #B9CCC4;
+    --accent: #12695C;
+    --accent-soft: #DFEDE9;
+    --signal: #8A5612;
+    --signal-soft: #F5EDDD;
+
+    --f-sans: "IBM Plex Sans KR", "Malgun Gothic", system-ui, -apple-system, sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    --s1: 0.5rem;
+    --s2: 0.875rem;
+    --s3: 1.375rem;
+    --s4: 2.25rem;
+    --s5: 3.5rem;
+    --s6: 5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D1513;
+      --surface: #14201D;
+      --surface-2: #1B2825;
+      --ink: #E7EEEB;
+      --ink-muted: #91A59F;
+      --hairline: #26352F;
+      --hairline-strong: #384A44;
+      --accent: #56C4AC;
+      --accent-soft: #16302B;
+      --signal: #D9A85A;
+      --signal-soft: #2B2416;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0D1513;
+    --surface: #14201D;
+    --surface-2: #1B2825;
+    --ink: #E7EEEB;
+    --ink-muted: #91A59F;
+    --hairline: #26352F;
+    --hairline-strong: #384A44;
+    --accent: #56C4AC;
+    --accent-soft: #16302B;
+    --signal: #D9A85A;
+    --signal-soft: #2B2416;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-sans);
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: var(--s5) var(--s3) var(--s6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s5);
+  }
+
+  /* ---------- header ---------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+    padding-bottom: var(--s4);
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    font-weight: 700;
+    line-height: 1.14;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .standfirst {
+    max-width: 46ch;
+    font-size: 1.06rem;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+
+  .premise {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+  }
+
+  .premise div {
+    background: var(--surface);
+    padding: var(--s2) var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .premise dt {
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+  }
+
+  .premise dd {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  /* ---------- sections ---------- */
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+  }
+
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+    border-top: 1px solid var(--hairline-strong);
+    padding-top: var(--s2);
+  }
+
+  .sec-label {
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  h2 {
+    font-size: clamp(1.4rem, 3.4vw, 1.85rem);
+    font-weight: 600;
+    line-height: 1.28;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: var(--s2) 0 0;
+    letter-spacing: -0.005em;
+  }
+
+  p, li { max-width: 68ch; }
+  p { margin: 0; }
+
+  ul, ol {
+    margin: 0;
+    padding-left: 1.3em;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+  }
+
+  li::marker { color: var(--ink-muted); }
+
+  strong { font-weight: 600; }
+
+  code {
+    font-family: var(--f-mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border-radius: 2px;
+    padding: 0.1em 0.34em;
+    word-break: break-all;
+  }
+
+  .term {
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  a { color: var(--accent); }
+
+  /* ---------- formula block ---------- */
+
+  .formula {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-left: 3px solid var(--accent);
+    padding: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+    overflow-x: auto;
+  }
+
+  .formula .eq {
+    font-family: var(--f-mono);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  .formula .eq em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .formula .terms {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: var(--s1) var(--s3);
+    font-size: 0.88rem;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+
+  .formula .terms b {
+    font-family: var(--f-mono);
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* ---------- callout ---------- */
+
+  .note {
+    background: var(--signal-soft);
+    border: 1px solid var(--signal);
+    padding: var(--s2) var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .note .note-label {
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--signal);
+  }
+
+  .note p { font-size: 0.94rem; }
+
+  /* ---------- tables ---------- */
+
+  .tbl-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--hairline);
+    background: var(--surface);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 34rem;
+    font-size: 0.9rem;
+  }
+
+  caption {
+    caption-side: bottom;
+    text-align: left;
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    padding: var(--s1) var(--s2) 0;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: top;
+  }
+
+  thead th {
+    font-family: var(--f-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.num, th.num {
+    font-family: var(--f-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  td.key {
+    font-family: var(--f-mono);
+    font-size: 0.84rem;
+    white-space: nowrap;
+  }
+
+  /* ---------- figures ---------- */
+
+  figure {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    padding: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+    overflow-x: auto;
+  }
+
+  figure svg {
+    display: block;
+    width: 100%;
+    min-width: 30rem;
+    max-width: 100%;
+    height: auto;
+    color: var(--ink);
+  }
+
+  figcaption {
+    font-size: 0.86rem;
+    color: var(--ink-muted);
+    max-width: 70ch;
+  }
+
+  .svg-fill-surface { fill: var(--surface); }
+  .svg-fill-panel { fill: var(--surface-2); }
+  .svg-accent-fill { fill: var(--accent); }
+  .svg-accent-stroke { stroke: var(--accent); }
+  .svg-accent-soft { fill: var(--accent-soft); }
+  .svg-signal-stroke { stroke: var(--signal); }
+  .svg-signal-fill { fill: var(--signal); }
+  .svg-label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    fill: var(--ink-muted);
+  }
+  .svg-label-strong {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    fill: var(--ink);
+  }
+  .svg-label-accent {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    fill: var(--accent);
+  }
+
+  /* ---------- misc ---------- */
+
+  .lede {
+    font-size: 1.04rem;
+    max-width: 62ch;
+  }
+
+  .split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: var(--s3);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    padding: var(--s3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+  }
+
+  .card h3 { margin: 0; }
+  .card p { font-size: 0.93rem; }
+
+  .card .tag {
+    font-family: var(--f-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  footer {
+    border-top: 1px solid var(--hairline-strong);
+    padding-top: var(--s2);
+    font-size: 0.84rem;
+    color: var(--ink-muted);
+    max-width: 68ch;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+
+  @media (max-width: 40rem) {
+    .wrap { padding: var(--s4) var(--s2) var(--s5); gap: var(--s4); }
+    .formula .eq { font-size: 0.86rem; }
+  }
+
+  /* ---------- in-app nav (this page is served by `python -m vidsearch web`) ---------- */
+
+  .appnav {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--f-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+  }
+
+  .appnav a {
+    color: var(--ink-muted);
+    text-decoration: none;
+    border: 1px solid var(--hairline-strong);
+    padding: 0.3rem 0.75rem;
+  }
+
+  .appnav a:hover,
+  .appnav a:focus-visible { color: var(--accent); border-color: var(--accent); }
+
+  .appnav span { color: var(--ink-muted); opacity: 0.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <nav class="appnav">
+      <a href="/">&larr; vidsearch</a>
+      <span>검색 UI로 돌아가기</span>
+    </nav>
+
+    <span class="kicker">Vision-Language Model · 개념 지도</span>
+    <h1>프레임에서 토큰까지</h1>
+    <p class="standfirst">
+      VLM이 영상을 어떻게 "읽는지", 그리고 그 과정에서 왜 한계가 숫자로 튀어나오는지.
+      vidsearch가 쓰는 Qwen3-VL 세 모델을 예제 삼아 정리했습니다.
+    </p>
+    <dl class="premise">
+      <div>
+        <dt>전제</dt>
+        <dd>LLM은 토큰만 먹는다</dd>
+      </div>
+      <div>
+        <dt>따라서</dt>
+        <dd>이미지도 토큰이 되어야 한다</dd>
+      </div>
+      <div>
+        <dt>그 결과</dt>
+        <dd>모든 제약이 토큰 수로 환산된다</dd>
+      </div>
+    </dl>
+  </header>
+
+  <!-- ============ 1 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 하나</span>
+      <h2>VLM은 이미지를 "단어처럼" 만든다</h2>
+    </div>
+
+    <p class="lede">
+      언어모델은 토큰(token) 시퀀스만 처리합니다. 텍스트는 토크나이저가 단어 조각으로 잘라 번호를 붙이면 끝인데,
+      이미지는 그런 사전이 없습니다. <span class="term">VLM(Vision-Language Model)</span>이 하는 일은
+      이미지를 잘라 각 조각을 벡터로 바꾸고, 그 벡터들을 <strong>텍스트 토큰과 같은 시퀀스에 끼워 넣는</strong> 것입니다.
+    </p>
+
+    <p>
+      그래서 모델 입장에서 "사진 한 장"은 특별한 입력이 아니라 <strong>토큰 N개</strong>입니다.
+      질문 텍스트 30토큰 + 이미지 448토큰이면 모델이 보는 것은 478토큰짜리 문장 하나입니다.
+      이 관점이 잡히면 나머지는 전부 산수가 됩니다 — 컨텍스트 한계도, VRAM도, "영상 몇 초까지 넣을 수 있나"도
+      결국 같은 질문의 다른 표현입니다.
+    </p>
+
+    <div class="note">
+      <span class="note-label">여기서 갈린다</span>
+      <p>
+        "이미지를 몇 픽셀까지 넣을 수 있나"는 답이 없는 질문입니다. 모델이 세는 단위는 픽셀이 아니라 토큰이고,
+        픽셀 → 토큰 환산율은 우리가 설정으로 바꿀 수 있기 때문입니다. 항상 토큰으로 환산해서 생각해야 합니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 둘</span>
+      <h2>비주얼 토큰 — 32×32 픽셀이 한 덩어리</h2>
+    </div>
+
+    <p>
+      이미지는 격자로 잘립니다. Qwen3-VL은 <code>patch_size = 16</code>이라 먼저 <strong>16×16 픽셀 패치</strong>로 자르고,
+      ViT(비전 트랜스포머)를 통과시킨 뒤 <code>spatial_merge_size = 2</code>에 따라
+      <strong>인접한 2×2 패치를 하나로 합칩니다</strong>. 합치는 이유는 단순합니다 — 토큰 수를 4분의 1로 줄이려고.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 760 250" role="img" aria-label="896×512 픽셀 프레임이 16픽셀 패치 56×32개로 잘린 뒤 2×2씩 병합되어 28×16 = 448개의 비주얼 토큰이 되는 과정">
+        <defs>
+          <marker id="ah1" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,4 0,8" fill="currentColor"/>
+          </marker>
+          <marker id="ah1a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,4 0,8" class="svg-accent-fill"/>
+          </marker>
+        </defs>
+
+        <!-- panel 1 : raw pixels -->
+        <text x="24" y="34" class="svg-label-strong">1. 원본 프레임</text>
+        <rect x="24" y="48" width="176" height="100" class="svg-fill-panel" stroke="currentColor" stroke-width="1.5"/>
+        <text x="112" y="103" class="svg-label" text-anchor="middle">896 × 512 px</text>
+        <text x="24" y="180" class="svg-label">연속된 픽셀</text>
+
+        <!-- arrow -->
+        <line x1="212" y1="98" x2="256" y2="98" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah1)"/>
+        <text x="234" y="88" class="svg-label" text-anchor="middle">자르기</text>
+
+        <!-- panel 2 : patches -->
+        <text x="268" y="34" class="svg-label-strong">2. 16px 패치</text>
+        <rect x="268" y="48" width="176" height="100" class="svg-fill-surface" stroke="currentColor" stroke-width="1.5"/>
+        <g stroke="currentColor" stroke-width="0.5" opacity="0.42">
+          <line x1="290" y1="48" x2="290" y2="148"/><line x1="312" y1="48" x2="312" y2="148"/>
+          <line x1="334" y1="48" x2="334" y2="148"/><line x1="356" y1="48" x2="356" y2="148"/>
+          <line x1="378" y1="48" x2="378" y2="148"/><line x1="400" y1="48" x2="400" y2="148"/>
+          <line x1="422" y1="48" x2="422" y2="148"/>
+          <line x1="268" y1="73" x2="444" y2="73"/><line x1="268" y1="98" x2="444" y2="98"/>
+          <line x1="268" y1="123" x2="444" y2="123"/>
+        </g>
+        <rect x="290" y="73" width="44" height="50" class="svg-accent-soft"/>
+        <rect x="290" y="73" width="44" height="50" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="312" y="103" class="svg-label-accent" text-anchor="middle">2×2</text>
+        <text x="268" y="180" class="svg-label">56 × 32 = 1,792 패치</text>
+
+        <!-- arrow accent -->
+        <line x1="456" y1="98" x2="500" y2="98" class="svg-accent-stroke" stroke-width="1.5" marker-end="url(#ah1a)"/>
+        <text x="478" y="88" class="svg-label-accent" text-anchor="middle">병합</text>
+
+        <!-- panel 3 : tokens -->
+        <text x="512" y="34" class="svg-label-strong">3. 비주얼 토큰</text>
+        <rect x="512" y="48" width="176" height="100" class="svg-fill-surface" stroke="currentColor" stroke-width="1.5"/>
+        <g stroke="currentColor" stroke-width="0.5" opacity="0.42">
+          <line x1="556" y1="48" x2="556" y2="148"/><line x1="600" y1="48" x2="600" y2="148"/>
+          <line x1="644" y1="48" x2="644" y2="148"/>
+          <line x1="512" y1="98" x2="688" y2="98"/>
+        </g>
+        <rect x="556" y="48" width="44" height="50" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="578" y="78" class="svg-label-accent" text-anchor="middle">1</text>
+        <text x="512" y="180" class="svg-label">28 × 16 = <tspan class="svg-label-accent">448 토큰</tspan></text>
+
+        <!-- bottom rule -->
+        <line x1="24" y1="205" x2="736" y2="205" stroke="currentColor" stroke-width="1" opacity="0.25"/>
+        <text x="24" y="228" class="svg-label">토큰 1개가 담당하는 원본 영역 = 16 px × 2 = <tspan class="svg-label-accent">32 × 32 픽셀</tspan></text>
+      </svg>
+      <figcaption>
+        패치 격자는 도식입니다(실제로는 56×32개). 요점은 두 단계를 거치고 나면
+        <strong>비주얼 토큰 1개 = 원본 32×32 픽셀</strong>이라는 환산율이 고정된다는 것입니다.
+      </figcaption>
+    </figure>
+
+    <div class="formula">
+      <div class="eq">이미지 토큰 수 &nbsp;=&nbsp; (<em>H</em> ÷ 32) &nbsp;×&nbsp; (<em>W</em> ÷ 32)</div>
+      <dl class="terms">
+        <div><b>H, W</b> — 모델에 들어가는 (리사이즈 후) 높이·너비</div>
+        <div><b>32</b> — <code>patch_size 16</code> × <code>merge_size 2</code></div>
+      </dl>
+    </div>
+
+    <p>
+      실제로 vidsearch의 인덱싱 프레임은 896×512로 들어가서 <strong>28 × 16 = 448토큰</strong>이 됩니다.
+      기획 단계에서 144토큰으로 잡았다가 3배 넘게 틀렸던 게 이 계산인데, 패치 크기를 14로 착각했기 때문입니다.
+      <strong>모델이 바뀌면 이 환산율부터 다시 확인해야 합니다.</strong>
+    </p>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 셋</span>
+      <h2>해상도를 올려도 토큰이 안 늘어나는 이유</h2>
+    </div>
+
+    <p>
+      VLM은 임의 해상도를 그대로 받지 않습니다. 전처리기가 <span class="term">smart_resize</span>라는 함수로
+      두 가지를 강제합니다. 첫째, 가로·세로를 32의 배수로 반올림합니다(패치가 딱 떨어져야 하므로).
+      둘째, 총 픽셀 수를 <code>min_pixels</code>와 <code>max_pixels</code> 사이로 <strong>조용히 밀어 넣습니다</strong>.
+    </p>
+
+    <p>
+      상한을 넘으면 에러가 아니라 <strong>자동 축소</strong>입니다. 그래서 "입력 이미지를 키웠는데
+      메모리 사용량이 그대로"라는 현상이 생깁니다 — 키운 만큼 도로 줄여졌기 때문입니다.
+      vidsearch에서 <code>--width</code>를 896에서 1120으로 올려도 VRAM이 사실상 변하지 않았던 것도 같은 이유입니다.
+    </p>
+
+    <div class="tbl-scroll">
+      <table>
+        <caption>vidsearch의 <code>MAX_PIXELS</code>(501,760 px) 아래에서의 실제 동작. 토큰 수는 계산값입니다.</caption>
+        <thead>
+          <tr>
+            <th>입력 지정</th>
+            <th class="num">요청 픽셀</th>
+            <th>상한 초과?</th>
+            <th class="num">실제 투입</th>
+            <th class="num">토큰/프레임</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">--width 896</td>
+            <td class="num">451,584</td>
+            <td>아니오</td>
+            <td class="num">896 × 512</td>
+            <td class="num">448</td>
+          </tr>
+          <tr>
+            <td class="key">--width 1120</td>
+            <td class="num">705,600</td>
+            <td>예 → 축소</td>
+            <td class="num">928 × 512</td>
+            <td class="num">464</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      즉 <strong>비용을 실제로 좌우하는 손잡이는 해상도 인자가 아니라 <code>max_pixels</code></strong>입니다.
+      이걸 모르면 "해상도를 낮췄는데 왜 더 빨라지지 않지?" 혹은 그 반대로 계속 헤매게 됩니다.
+    </p>
+
+    <div class="note">
+      <span class="note-label">단위 함정</span>
+      <p>
+        많은 예제 코드가 <code>max_pixels = 28*28*640</code>처럼 씁니다. 여기서 28은
+        <strong>이전 세대 Qwen2-VL의 환산율</strong>(패치 14 × 병합 2)이고, "640토큰"이라는 뜻으로 쓴 표현입니다.
+        Qwen3-VL은 32가 기준이라 같은 숫자가 490토큰이 됩니다. 복붙한 상수의 단위가 지금 쓰는 모델과
+        맞는지 확인해야 합니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 넷</span>
+      <h2>영상 = 프레임 묶음, 단 두 장씩</h2>
+    </div>
+
+    <p>
+      VLM에게 "영상"은 별도의 입력 종류가 아니라 <strong>프레임 여러 장</strong>입니다. 다만 이미지 여러 장과
+      두 가지가 다릅니다.
+    </p>
+
+    <p>
+      첫째, <strong>프레임을 알아서 골라냅니다.</strong> 전처리기 기본값이 <code>fps = 2</code>라
+      영상 길이와 무관하게 초당 2장만 뽑습니다. 30fps 영상을 넣어도 28장은 버려집니다.
+      대신 <code>min_frames = 4</code>, <code>max_frames = 768</code>이라 아무리 긴 영상도 768장으로 잘립니다.
+    </p>
+
+    <p>
+      둘째, <span class="term">temporal_patch_size = 2</span> — <strong>시간축으로도 패치를 만듭니다.</strong>
+      연속한 프레임 2장이 하나의 시간 슬라이스로 합쳐져서 토큰이 됩니다. 이미지 2장이 아니라 1장 몫의
+      토큰만 쓴다는 뜻이고, 동시에 <strong>그 두 장 사이의 차이는 하나로 뭉개진다</strong>는 뜻이기도 합니다.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 760 230" role="img" aria-label="초당 2프레임으로 샘플링된 8장의 프레임이 2장씩 짝지어져 4개의 시간 슬라이스가 되고, 각 슬라이스가 0.5초 구간을 담당하는 구조">
+        <defs>
+          <marker id="ah2" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,0 10,4 0,8" class="svg-accent-fill"/>
+          </marker>
+        </defs>
+
+        <text x="24" y="28" class="svg-label-strong">fps = 2 로 뽑은 프레임</text>
+
+        <!-- frames -->
+        <g stroke="currentColor" stroke-width="1.5">
+          <rect x="24"  y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="106" y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="200" y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="282" y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="376" y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="458" y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="552" y="44" width="70" height="48" class="svg-fill-panel"/>
+          <rect x="634" y="44" width="70" height="48" class="svg-fill-panel"/>
+        </g>
+        <g class="svg-label" text-anchor="middle">
+          <text x="59"  y="74">0.0s</text>
+          <text x="141" y="74">0.5s</text>
+          <text x="235" y="74">1.0s</text>
+          <text x="317" y="74">1.5s</text>
+          <text x="411" y="74">2.0s</text>
+          <text x="493" y="74">2.5s</text>
+          <text x="587" y="74">3.0s</text>
+          <text x="669" y="74">3.5s</text>
+        </g>
+
+        <!-- pairing brackets -->
+        <g fill="none" class="svg-accent-stroke" stroke-width="1.5">
+          <path d="M 24 102 L 24 112 L 176 112 L 176 102"/>
+          <path d="M 200 102 L 200 112 L 352 112 L 352 102"/>
+          <path d="M 376 102 L 376 112 L 528 112 L 528 102"/>
+          <path d="M 552 102 L 552 112 L 704 112 L 704 102"/>
+        </g>
+        <g class="svg-accent-stroke" stroke-width="1.5">
+          <line x1="100" y1="112" x2="100" y2="132" marker-end="url(#ah2)"/>
+          <line x1="276" y1="112" x2="276" y2="132" marker-end="url(#ah2)"/>
+          <line x1="452" y1="112" x2="452" y2="132" marker-end="url(#ah2)"/>
+          <line x1="628" y1="112" x2="628" y2="132" marker-end="url(#ah2)"/>
+        </g>
+
+        <!-- slices -->
+        <g stroke-width="1.5" stroke="currentColor" class="svg-accent-stroke">
+          <rect x="24"  y="140" width="152" height="40" class="svg-accent-soft"/>
+          <rect x="200" y="140" width="152" height="40" class="svg-accent-soft"/>
+          <rect x="376" y="140" width="152" height="40" class="svg-accent-soft"/>
+          <rect x="552" y="140" width="152" height="40" class="svg-accent-soft"/>
+        </g>
+        <g class="svg-label-accent" text-anchor="middle">
+          <text x="100" y="165">슬라이스 1</text>
+          <text x="276" y="165">슬라이스 2</text>
+          <text x="452" y="165">슬라이스 3</text>
+          <text x="628" y="165">슬라이스 4</text>
+        </g>
+
+        <text x="24" y="212" class="svg-label">8 프레임 → 4 슬라이스 · 640×352 클립이면 슬라이스당 220토큰 = <tspan class="svg-label-accent">4초에 880토큰</tspan></text>
+      </svg>
+      <figcaption>
+        프레임 2장이 토큰 상으로 1장 몫이 됩니다. fps 2 샘플링에서 슬라이스 하나는 정확히 1초를 덮으므로,
+        <strong>0.5초보다 짧게 스쳐 지나간 사건은 원리상 표현될 수 없습니다</strong> — 모델의 시간 해상도 하한입니다.
+      </figcaption>
+    </figure>
+
+    <div class="formula">
+      <div class="eq">영상 토큰 수 &nbsp;=&nbsp; (<em>프레임수</em> ÷ 2) &nbsp;×&nbsp; (<em>H</em> ÷ 32) &nbsp;×&nbsp; (<em>W</em> ÷ 32)</div>
+      <dl class="terms">
+        <div><b>÷ 2</b> — <code>temporal_patch_size</code>. 홀수면 마지막 프레임을 복제해 채웁니다</div>
+        <div><b>fps 2 기준</b> — 슬라이스 1개 = 영상 1초</div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 다섯</span>
+      <h2>토큰 예산 — 길이와 해상도는 같은 통장을 쓴다</h2>
+    </div>
+
+    <p>
+      여기까지 오면 "영상 몇 초까지 넣을 수 있나"라는 질문이 왜 그 자체로는 답이 없는지 보입니다.
+      한도는 초가 아니라 <strong>총 토큰 수</strong>에 걸려 있고, 그 토큰은 <strong>길이 × 해상도</strong>로 소비되기 때문입니다.
+      같은 예산으로 짧고 선명하게 볼 수도, 길고 흐리게 볼 수도 있습니다.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 760 250" role="img" aria-label="같은 토큰 예산을 길이와 해상도가 나눠 쓰는 구조. 프레임 수가 많으면 프레임당 해상도가 낮아지고, 프레임 수가 적으면 해상도를 높일 수 있으며 두 직사각형의 면적은 같다">
+        <!-- axes -->
+        <line x1="60" y1="30" x2="60" y2="196" stroke="currentColor" stroke-width="1.5"/>
+        <line x1="60" y1="196" x2="716" y2="196" stroke="currentColor" stroke-width="1.5"/>
+        <text x="52" y="30" class="svg-label" text-anchor="end" transform="rotate(-90 52 30)">프레임당 픽셀 →</text>
+        <text x="716" y="216" class="svg-label" text-anchor="end">프레임 수 →</text>
+
+        <!-- tall narrow -->
+        <rect x="60" y="46" width="120" height="150" class="svg-accent-soft"/>
+        <rect x="60" y="46" width="120" height="150" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="120" y="112" class="svg-label-accent" text-anchor="middle">8 프레임</text>
+        <text x="120" y="130" class="svg-label-accent" text-anchor="middle">고해상도</text>
+
+        <!-- wide short -->
+        <rect x="212" y="166" width="504" height="30" fill="none" class="svg-accent-stroke" stroke-width="2" stroke-dasharray="5 3"/>
+        <text x="464" y="186" class="svg-label-accent" text-anchor="middle">768 프레임 · 저해상도</text>
+
+        <!-- equal area note -->
+        <line x1="192" y1="120" x2="204" y2="120" stroke="currentColor" stroke-width="1" opacity="0.4"/>
+        <text x="212" y="112" class="svg-label-strong">두 직사각형의 면적은 같다</text>
+        <text x="212" y="132" class="svg-label">= 12,288 토큰 (체크포인트 기본 영상 예산)</text>
+        <text x="212" y="150" class="svg-label">넘으면 에러가 아니라 해상도가 자동으로 깎인다</text>
+
+        <!-- our clip marker -->
+        <circle cx="98" cy="86" r="4" class="svg-signal-fill"/>
+        <line x1="98" y1="86" x2="98" y2="30" class="svg-signal-stroke" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="106" y="26" class="svg-signal-fill" style="font-family: var(--f-mono); font-size: 11px;">vidsearch 4초 클립 · 880 토큰</text>
+
+        <text x="60" y="240" class="svg-label">예산을 다 쓰려면: 768프레임이면 프레임당 약 192×160, 640×352를 유지하려면 약 55초</text>
+      </svg>
+      <figcaption>
+        Qwen3-VL 체크포인트가 영상에 배정한 기본 예산은 25,165,824 픽셀 — 토큰으로 12,288개입니다.
+        길이를 늘리면 전처리기가 해상도를 깎아 면적을 맞춥니다. 조용히 일어나므로 직접 계산하지 않으면 알아채기 어렵습니다.
+      </figcaption>
+    </figure>
+
+    <p>
+      예산은 층층이 쌓여 있습니다. 아래로 갈수록 바꾸기 어렵습니다.
+    </p>
+
+    <div class="tbl-scroll">
+      <table>
+        <caption>Qwen3-VL 기준. 위의 두 층은 우리가 바꿀 수 있고, 아래 두 층은 모델에 박혀 있습니다.</caption>
+        <thead>
+          <tr>
+            <th>층</th>
+            <th>한도</th>
+            <th class="num">값</th>
+            <th>넘으면</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>우리 설정</td>
+            <td><code>MAX_PIXELS</code></td>
+            <td class="num">490 토큰/장</td>
+            <td>축소</td>
+          </tr>
+          <tr>
+            <td>체크포인트 기본</td>
+            <td>영상 픽셀 예산</td>
+            <td class="num">12,288 토큰</td>
+            <td>축소</td>
+          </tr>
+          <tr>
+            <td>체크포인트 기본</td>
+            <td><code>max_frames</code></td>
+            <td class="num">768 프레임</td>
+            <td>솎아냄 (fps 하락)</td>
+          </tr>
+          <tr>
+            <td>아키텍처</td>
+            <td><code>max_position_embeddings</code></td>
+            <td class="num">262,144 토큰</td>
+            <td>불가</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      맨 아래 <strong>262,144(=256K)</strong>가 진짜 벽입니다. 위치 인코딩이 그 길이까지만 정의되어 있어서
+      설정으로 풀 수 없습니다. 나머지 세 층은 전부 "권장 기본값"이고, 올리면 그다음 벽인 GPU 메모리를 만납니다.
+    </p>
+  </section>
+
+  <!-- ============ 6 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 여섯</span>
+      <h2>왜 모델이 세 개나 필요한가</h2>
+    </div>
+
+    <p>
+      vidsearch는 Qwen3-VL을 세 벌 씁니다. 같은 아키텍처인데 <strong>출력의 형태가 다르고</strong>,
+      그 차이가 검색 파이프라인의 구조를 결정합니다.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 760 280" role="img" aria-label="듀얼 타워 임베딩 모델은 질의와 프레임을 각각 따로 인코딩해 벡터 내적으로 점수를 내지만, 크로스 인코더 리랭커는 질의와 프레임을 하나의 모델에 함께 넣어 서로를 참조하게 한 뒤 점수를 낸다">
+        <defs>
+          <marker id="ah3" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,0 10,4 0,8" fill="currentColor"/>
+          </marker>
+          <marker id="ah3a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,0 10,4 0,8" class="svg-accent-fill"/>
+          </marker>
+        </defs>
+
+        <!-- divider -->
+        <line x1="380" y1="16" x2="380" y2="264" stroke="currentColor" stroke-width="1" opacity="0.25"/>
+
+        <!-- LEFT : dual tower -->
+        <text x="24" y="30" class="svg-label-strong">듀얼 타워 (Embedding-2B)</text>
+
+        <rect x="24" y="46" width="98" height="34" class="svg-fill-panel" stroke="currentColor" stroke-width="1.5"/>
+        <text x="73" y="68" class="svg-label" text-anchor="middle">질의 텍스트</text>
+        <rect x="24" y="150" width="98" height="34" class="svg-fill-panel" stroke="currentColor" stroke-width="1.5"/>
+        <text x="73" y="172" class="svg-label" text-anchor="middle">프레임</text>
+
+        <line x1="126" y1="63" x2="158" y2="63" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="126" y1="167" x2="158" y2="167" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+
+        <rect x="162" y="46" width="74" height="34" class="svg-fill-surface" stroke="currentColor" stroke-width="1.5"/>
+        <text x="199" y="68" class="svg-label" text-anchor="middle">인코더</text>
+        <rect x="162" y="150" width="74" height="34" class="svg-fill-surface" stroke="currentColor" stroke-width="1.5"/>
+        <text x="199" y="172" class="svg-label" text-anchor="middle">인코더</text>
+
+        <line x1="240" y1="63" x2="270" y2="63" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+        <line x1="240" y1="167" x2="270" y2="167" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+
+        <text x="276" y="68" class="svg-label">벡터 2048</text>
+        <text x="276" y="172" class="svg-label">벡터 2048</text>
+
+        <path d="M 310 78 L 310 106 L 310 106" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M 310 152 L 310 124" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="272" y="106" width="76" height="26" class="svg-fill-panel" stroke="currentColor" stroke-width="1.5"/>
+        <text x="310" y="124" class="svg-label" text-anchor="middle">내적</text>
+
+        <text x="24" y="212" class="svg-label">두 입력은 서로를 한 번도 보지 않는다</text>
+        <text x="24" y="230" class="svg-label">→ 미리 계산해 저장 가능 · 빠름</text>
+        <text x="24" y="252" class="svg-label" style="fill: var(--signal);">→ 판단이 거칠다 (모달리티 갭)</text>
+
+        <!-- RIGHT : cross encoder -->
+        <text x="404" y="30" class="svg-label-strong">크로스 인코더 (Reranker-2B)</text>
+
+        <rect x="404" y="46" width="98" height="34" class="svg-fill-panel" stroke="currentColor" stroke-width="1.5"/>
+        <text x="453" y="68" class="svg-label" text-anchor="middle">질의 텍스트</text>
+        <rect x="404" y="150" width="98" height="34" class="svg-fill-panel" stroke="currentColor" stroke-width="1.5"/>
+        <text x="453" y="172" class="svg-label" text-anchor="middle">프레임</text>
+
+        <path d="M 506 63 L 540 63 L 540 100" fill="none" class="svg-accent-stroke" stroke-width="2" marker-end="url(#ah3a)"/>
+        <path d="M 506 167 L 540 167 L 540 130" fill="none" class="svg-accent-stroke" stroke-width="2" marker-end="url(#ah3a)"/>
+
+        <rect x="556" y="88" width="104" height="54" class="svg-accent-soft"/>
+        <rect x="556" y="88" width="104" height="54" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="608" y="110" class="svg-label-accent" text-anchor="middle">하나의</text>
+        <text x="608" y="128" class="svg-label-accent" text-anchor="middle">트랜스포머</text>
+
+        <line x1="664" y1="115" x2="694" y2="115" class="svg-accent-stroke" stroke-width="2" marker-end="url(#ah3a)"/>
+        <text x="700" y="119" class="svg-label-accent">logit</text>
+
+        <text x="404" y="212" class="svg-label">둘이 같은 어텐션 안에서 서로를 참조한다</text>
+        <text x="404" y="230" class="svg-label">→ 정확하다</text>
+        <text x="404" y="252" class="svg-label" style="fill: var(--signal);">→ 후보마다 매번 계산 · 느림</text>
+      </svg>
+      <figcaption>
+        차이는 화살표가 만나는 지점 하나입니다. 왼쪽은 <strong>벡터가 된 뒤에</strong> 만나고, 오른쪽은
+        <strong>모델 안에서</strong> 만납니다. 그래서 왼쪽만 미리 인덱싱할 수 있고, 오른쪽은 상위 후보에만 쓸 수 있습니다.
+      </figcaption>
+    </figure>
+
+    <div class="split">
+      <div class="card">
+        <span class="tag">Embedding-2B</span>
+        <h3>회수 — 벡터로 좁힌다</h3>
+        <p>
+          프레임 하나를 2048차원 벡터 하나로 압축합니다. 미리 전부 계산해 <code>.npy</code>로 저장해두면
+          검색은 행렬 곱 한 번, 수십 밀리초입니다.
+        </p>
+        <p>
+          한계도 여기서 옵니다. <strong>4초 클립을 넣든 55초를 넣든 출력은 똑같이 벡터 하나</strong>입니다.
+          길게 넣을수록 정보가 뭉개지는 구조적 압축이라 GPU를 늘려도 해결되지 않습니다.
+        </p>
+      </div>
+      <div class="card">
+        <span class="tag">Reranker-2B</span>
+        <h3>재정렬 — 정확히 다시 본다</h3>
+        <p>
+          질의와 후보를 한 모델에 같이 넣어 점수(logit) 하나를 뱉습니다. 정확하지만 후보 수에 비례해 느려서,
+          회수 단계가 추린 상위 20구간에만 씁니다.
+        </p>
+        <p>
+          출력이 유사도가 아니라 logit이라 <strong>음수가 나올 수 있고</strong>, 0~1 코사인 점수와 같은
+          척도로 읽으면 안 됩니다.
+        </p>
+      </div>
+      <div class="card">
+        <span class="tag">4B-Instruct</span>
+        <h3>생성 — 말로 답한다</h3>
+        <p>
+          위 두 모델은 숫자만 냅니다. "사람이 몇 명 보이나" 같은 질문에 <strong>문장으로</strong> 답하려면
+          생성형 VLM이 따로 필요합니다.
+        </p>
+        <p>
+          대신 비쌉니다. 프레임 6장에 2,726토큰, 피크 9.72GB를 씁니다.
+        </p>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="note-label">모달리티 갭</span>
+      <p>
+        듀얼 타워의 고질적인 문제입니다. 텍스트 벡터와 이미지 벡터가 각각 다른 영역에 몰려 있어서,
+        <strong>있는 장면과 아예 없는 장면의 점수 차이가 거의 안 납니다.</strong>
+        vidsearch 실측에서 "눈 내리는 야경"(없는 장면)과 실제 장면의 1위 점수 차이가 0.01~0.05였습니다.
+        <strong>절대 점수로 "매치 여부"를 판단하면 안 되고</strong>, 순위로만 써야 하는 이유입니다.
+        리랭커가 존재하는 이유이기도 합니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 7 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 일곱</span>
+      <h2>생성형 VLM은 매번 다르게 답한다</h2>
+    </div>
+
+    <p>
+      임베딩·리랭킹은 결정론적입니다. 같은 입력이면 항상 같은 벡터가 나옵니다.
+      <strong>생성 모델은 다릅니다.</strong> 다음 토큰을 확률 분포에서 뽑기 때문에, 기본 설정 그대로 두면
+      같은 프레임에 같은 질문을 해도 실행할 때마다 답이 달라집니다.
+    </p>
+
+    <div class="tbl-scroll">
+      <table>
+        <caption>vidsearch가 <code>explain.py</code>에서 기본값을 덮어쓴 항목들. 사실 확인이 목적일 때의 설정입니다.</caption>
+        <thead>
+          <tr>
+            <th>파라미터</th>
+            <th>체크포인트 기본</th>
+            <th>우리 값</th>
+            <th>이유</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">do_sample</td>
+            <td class="num">true</td>
+            <td class="num">false</td>
+            <td>확률적 샘플링 대신 항상 최고 확률 토큰 선택(greedy) → 실행마다 동일한 답</td>
+          </tr>
+          <tr>
+            <td class="key">repetition_penalty</td>
+            <td class="num">1.0</td>
+            <td class="num">1.05</td>
+            <td>greedy는 같은 단어를 무한 반복하는 루프에 빠질 수 있어 최소한의 안전장치</td>
+          </tr>
+          <tr>
+            <td class="key">max_new_tokens</td>
+            <td>—</td>
+            <td class="num">512</td>
+            <td>답변 길이 예산. 소진되면 문장 중간에서 그냥 끊긴다</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      <strong>잘림은 조용히 일어납니다.</strong> 예산을 다 쓰고 멈춘 답변과 할 말을 마치고 멈춘 답변은
+      텍스트만 봐서 구분되지 않습니다(종료 토큰은 디코딩에서 제거되므로). 생성한 토큰 수가 예산과 같고
+      마지막 토큰이 종료 토큰이 아니면 잘린 것으로 판정해 사용자에게 알려줘야 합니다.
+    </p>
+
+    <p>
+      샘플링을 켜둔 채 겪었던 실제 증상들 — 한국어 질문에 중국어로 답하기, 같은 대상의 성별을 실행마다 다르게 말하기,
+      한 단어를 예산이 소진될 때까지 반복하기. <strong>사실을 묻는 작업이라면 샘플링을 꺼야 합니다.</strong>
+      창작이 목적일 때만 켭니다.
+    </p>
+  </section>
+
+  <!-- ============ 8 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">개념 여덟</span>
+      <h2>VRAM 산수 — 왜 셋을 동시에 못 올리나</h2>
+    </div>
+
+    <p>
+      모델 가중치가 차지하는 메모리는 <strong>파라미터 수 × 파라미터당 바이트</strong>입니다.
+      <code>bfloat16</code>은 파라미터당 2바이트이므로 2B 모델은 약 4.5GB, 4B 모델은 약 8GB입니다.
+      여기에 <strong>활성값과 KV 캐시</strong>가 입력 토큰 수에 비례해 더 붙습니다 — 이게 프레임을 늘릴 때 늘어나는 부분입니다.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 760 220" role="img" aria-label="12GB GPU에서 디스플레이가 1.7GB를 점유해 실가용은 10.5GB이며, 2B 모델 두 개와 4B 모델을 각각 하나씩만 올릴 수 있고 동시에는 올릴 수 없음을 보여주는 다이어그램">
+        <!-- ceiling -->
+        <line x1="24" y1="40" x2="736" y2="40" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="736" y="32" class="svg-label" text-anchor="end">물리 12 GB</text>
+
+        <line x1="24" y1="70" x2="736" y2="70" class="svg-signal-stroke" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="736" y="62" class="svg-signal-fill" style="font-family: var(--f-mono); font-size: 11px;" text-anchor="end">실가용 10.5 GB (디스플레이 1.7GB 제외)</text>
+
+        <!-- baseline -->
+        <line x1="24" y1="170" x2="736" y2="170" stroke="currentColor" stroke-width="1.5"/>
+
+        <!-- bars: one at a time -->
+        <rect x="60" y="125" width="96" height="45" class="svg-accent-soft"/>
+        <rect x="60" y="125" width="96" height="45" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="108" y="152" class="svg-label-accent" text-anchor="middle">Embed 2B</text>
+        <text x="108" y="188" class="svg-label" text-anchor="middle">4.5 GB</text>
+
+        <rect x="196" y="125" width="96" height="45" class="svg-accent-soft"/>
+        <rect x="196" y="125" width="96" height="45" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="244" y="152" class="svg-label-accent" text-anchor="middle">Rerank 2B</text>
+        <text x="244" y="188" class="svg-label" text-anchor="middle">4.5 GB</text>
+
+        <rect x="332" y="88" width="96" height="82" class="svg-accent-soft"/>
+        <rect x="332" y="88" width="96" height="82" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="380" y="134" class="svg-label-accent" text-anchor="middle">Explain 4B</text>
+        <text x="380" y="188" class="svg-label" text-anchor="middle">9.7 GB 피크</text>
+
+        <text x="60" y="108" class="svg-label">하나씩이면 들어간다</text>
+
+        <!-- combined : overflow -->
+        <line x1="470" y1="30" x2="470" y2="196" stroke="currentColor" stroke-width="1" opacity="0.25"/>
+
+        <rect x="530" y="125" width="130" height="45" class="svg-accent-soft"/>
+        <rect x="530" y="125" width="130" height="45" fill="none" class="svg-accent-stroke" stroke-width="2"/>
+        <text x="595" y="152" class="svg-label-accent" text-anchor="middle">2B + 2B</text>
+
+        <rect x="530" y="26" width="130" height="99" fill="none" class="svg-signal-stroke" stroke-width="2" stroke-dasharray="5 3"/>
+        <text x="595" y="80" class="svg-signal-fill" style="font-family: var(--f-mono); font-size: 11px; font-weight: 500;" text-anchor="middle">천장 초과</text>
+        <text x="595" y="188" class="svg-label" text-anchor="middle">9.0 GB + 활성값 → OOM</text>
+
+        <text x="530" y="108" class="svg-label">동시에는 안 된다</text>
+      </svg>
+      <figcaption>
+        그래서 vidsearch는 단계마다 <strong>로드 → 사용 → 해제</strong>를 반복합니다. 모델 클래스마다
+        <code>release()</code>가 있고 <code>torch.cuda.empty_cache()</code>까지 부르는 이유입니다.
+        속도를 조금 내주고 12GB 카드에서 세 모델을 다 쓰는 거래입니다.
+      </figcaption>
+    </figure>
+
+    <p>
+      <code>nvidia-smi</code>의 총량을 그대로 예산으로 잡으면 안 됩니다. 디스플레이 출력이 이미 1.7GB를 쓰고 있어서
+      <strong>12GB 카드의 실가용은 10.5GB</strong>입니다. 4B 모델이 프레임 6장에서 9.72GB를 쓰니 여유는 0.8GB뿐이고,
+      프레임 한 장을 추가할 때마다 448토큰씩 늘어납니다 — <code>--max-frames</code>를 크게 올릴 수 없는 진짜 이유입니다.
+    </p>
+  </section>
+
+  <!-- ============ 9 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">참조</span>
+      <h2>용어 빠른 대조표</h2>
+    </div>
+
+    <div class="tbl-scroll">
+      <table>
+        <caption>설정 파일이나 논문에서 마주칠 때 무엇을 뜻하는지.</caption>
+        <thead>
+          <tr>
+            <th>용어</th>
+            <th>한 줄 뜻</th>
+            <th>실무에서 걸리는 지점</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="key">patch_size</td>
+            <td>이미지를 자르는 정사각형 한 변(px)</td>
+            <td>모델 세대마다 다름(14 vs 16). 토큰 계산의 출발점</td>
+          </tr>
+          <tr>
+            <td class="key">merge_size</td>
+            <td>인접 패치를 몇×몇씩 합칠지</td>
+            <td>patch × merge = 토큰 1개의 픽셀 폭</td>
+          </tr>
+          <tr>
+            <td class="key">temporal_patch_size</td>
+            <td>시간축으로 묶는 프레임 수</td>
+            <td>시간 해상도의 하한을 결정</td>
+          </tr>
+          <tr>
+            <td class="key">min/max_pixels</td>
+            <td>입력 한 장의 픽셀 범위</td>
+            <td>넘으면 에러가 아니라 자동 축소 — 조용함</td>
+          </tr>
+          <tr>
+            <td class="key">smart_resize</td>
+            <td>32 배수 정렬 + 예산 맞춤 리사이즈</td>
+            <td>실제 투입 해상도는 여기 통과 후 값</td>
+          </tr>
+          <tr>
+            <td class="key">max_position_embeddings</td>
+            <td>모델이 다룰 수 있는 최대 시퀀스 길이</td>
+            <td>유일하게 설정으로 못 푸는 벽</td>
+          </tr>
+          <tr>
+            <td class="key">bi-encoder / 듀얼 타워</td>
+            <td>두 입력을 따로 인코딩 후 벡터 비교</td>
+            <td>빠르고 미리 계산 가능, 대신 판단이 거침</td>
+          </tr>
+          <tr>
+            <td class="key">cross-encoder</td>
+            <td>두 입력을 함께 넣어 직접 비교</td>
+            <td>정확하지만 후보 수만큼 매번 계산</td>
+          </tr>
+          <tr>
+            <td class="key">모달리티 갭</td>
+            <td>텍스트 벡터와 이미지 벡터가 서로 다른 영역에 몰림</td>
+            <td>절대 점수로 매치 여부 판단 불가, 순위로만</td>
+          </tr>
+          <tr>
+            <td class="key">MRL / truncate_dim</td>
+            <td>벡터 앞부분만 잘라 써도 동작하도록 학습</td>
+            <td>2048 → 1024로 잘라 메모리·저장 절감 가능</td>
+          </tr>
+          <tr>
+            <td class="key">logit</td>
+            <td>확률로 변환되기 전의 원점수</td>
+            <td>음수 가능. 0~1 유사도와 다른 척도</td>
+          </tr>
+          <tr>
+            <td class="key">greedy decoding</td>
+            <td>매번 최고 확률 토큰만 선택</td>
+            <td>재현 가능해지지만 반복 루프 위험</td>
+          </tr>
+          <tr>
+            <td class="key">KV 캐시</td>
+            <td>생성 중 재사용하려 저장하는 중간 상태</td>
+            <td>입력 토큰 수에 비례해 VRAM 증가</td>
+          </tr>
+          <tr>
+            <td class="key">bfloat16</td>
+            <td>파라미터당 2바이트인 부동소수점 형식</td>
+            <td>파라미터 수 × 2 = 가중치 메모리 어림값</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 10 ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-label">적용</span>
+      <h2>vidsearch에서 각 개념이 앉아 있는 자리</h2>
+    </div>
+
+    <div class="tbl-scroll">
+      <table>
+        <caption>개념을 코드에서 찾을 때의 지도.</caption>
+        <thead>
+          <tr>
+            <th>개념</th>
+            <th>어디에</th>
+            <th>현재 값</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>픽셀 예산</td>
+            <td class="key">config.py — MIN/MAX_PIXELS</td>
+            <td class="num">501,760 px (≈490 토큰)</td>
+          </tr>
+          <tr>
+            <td>프레임 해상도</td>
+            <td class="key">config.py — DEFAULT_FRAME_WIDTH</td>
+            <td class="num">896 → 448 토큰/장</td>
+          </tr>
+          <tr>
+            <td>영상 → 프레임 샘플링</td>
+            <td class="key">media.py — extract_frames</td>
+            <td class="num">fps 1.0</td>
+          </tr>
+          <tr>
+            <td>영상 입력 단위</td>
+            <td class="key">media.py — extract_clips</td>
+            <td class="num">4초 window / 2초 stride / 640px</td>
+          </tr>
+          <tr>
+            <td>듀얼 타워 회수</td>
+            <td class="key">embedder.py — encode_documents</td>
+            <td class="num">2048차원, 상위 150</td>
+          </tr>
+          <tr>
+            <td>크로스 인코더 재정렬</td>
+            <td class="key">reranker.py</td>
+            <td class="num">상위 20구간만</td>
+          </tr>
+          <tr>
+            <td>생성 설정</td>
+            <td class="key">explain.py — ask()</td>
+            <td class="num">greedy, 512 토큰, 6프레임</td>
+          </tr>
+          <tr>
+            <td>VRAM 교대</td>
+            <td class="key">각 모델의 release()</td>
+            <td class="num">동시 상주 금지</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    수치는 Qwen3-VL 체크포인트의 <code>config.json</code>·<code>preprocessor_config.json</code>과
+    설치된 <code>transformers</code> 소스에서 확인한 값이며, 토큰 수는 그 값들로부터의 계산입니다
+    (896px 프레임의 448토큰과 4B 모델의 9.72GB 피크는 실측). 다른 모델로 옮길 때는
+    <code>patch_size</code>·<code>merge_size</code>·<code>temporal_patch_size</code> 세 가지부터 다시 읽어야 합니다.
+  </footer>
+
+</div>
+</body>
+</html>
