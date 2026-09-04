@@ -1,4 +1,16 @@
+import math
 from dataclasses import dataclass
+
+
+def relevance(score: float) -> float:
+    """Reranker logit -> 0..1 relevance, the mapping the model card documents (a sigmoid).
+
+    The raw logit reads like a similarity but is not one: -0.3 looks like "no match" while
+    it means "42% likely relevant", and the same match scores differently depending on how
+    the query is worded. Lives here rather than in reranker.py so that printing a result
+    does not drag in torch.
+    """
+    return 1.0 / (1.0 + math.exp(-score))
 
 
 @dataclass

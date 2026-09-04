@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from . import config, pipeline
+from .segment import relevance
 
 
 def cmd_index(args: argparse.Namespace) -> None:
@@ -57,7 +58,7 @@ def cmd_search(args: argparse.Namespace) -> None:
             ensure_ascii=False, indent=2,
         ))
     else:
-        _print_table(result.segments, video_path)
+        _print_table(result.segments, video_path, result.reranked)
         _print_timings(result.timings, result.total_seconds)
 
 
@@ -139,13 +140,17 @@ def _fmt_hhmmss(t: float) -> str:
     return f"{h:02d}:{m:02d}:{s:06.3f}"
 
 
-def _print_table(results: list, video_path: str) -> None:
+def _print_table(results: list, video_path: str, reranked: bool = False) -> None:
     if not results:
         print("No results.")
         return
-    print(f"{'time':>14}  {'score':>8}  thumb")
+    # A reranker score is a logit, not a similarity, so print what it means alongside it —
+    # otherwise a negative number reads as "no match" (see segment.relevance). Without
+    # reranking the score is already a 0..1 cosine and needs no second column.
+    print(f"{'time':>14}  {'score':>8}" + ("  match  thumb" if reranked else "  thumb"))
     for s in results:
-        print(f"{_fmt_hhmmss(s.peak_t):>14}  {s.max_score:8.4f}  {s.peak_thumb}")
+        match = f"  {relevance(s.max_score) * 100:4.0f}%" if reranked else ""
+        print(f"{_fmt_hhmmss(s.peak_t):>14}  {s.max_score:8.4f}{match}  {s.peak_thumb}")
     best = results[0]
     print()
     print(f'ffplay -ss {best.peak_t:.2f} "{video_path}"')

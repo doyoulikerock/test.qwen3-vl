@@ -34,6 +34,12 @@ class Reranker:
             torch.cuda.empty_cache()
 
     def rank(self, query: str, documents: list[str]) -> list[dict]:
-        """documents: image file paths. Returns list of {'corpus_id', 'score'} sorted desc."""
+        """documents: image/clip file paths. Returns list of {'corpus_id', 'score'} sorted desc.
+
+        `score` is a raw logit (the model's yes-vs-no token difference), not a similarity:
+        0 is the 50% mark and `segment.relevance()` maps it to a probability. Only the ordering and
+        the gaps within one ranking are meaningful — the absolute value shifts with how the
+        query is phrased.
+        """
         self.load()
-        return self._model.rank(query, documents)
+        return self._model.rank(query, documents, prompt=config.RERANK_INSTRUCTION)

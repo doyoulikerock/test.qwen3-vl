@@ -26,6 +26,7 @@ from urllib.parse import unquote, urlparse
 
 from . import config
 from .models import IdleEvictor, ModelPool
+from .segment import relevance
 from .pipeline import IndexMissing, find_videos, run_ask, run_index, run_search
 
 # Directory scanned for video files that are not indexed yet, so they can be picked from
@@ -289,6 +290,7 @@ class Handler(BaseHTTPRequestHandler):
                 "video_path": video_path,
                 "timings": result.timings,
                 "total_seconds": result.total_seconds,
+                "reranked": result.reranked,
                 "results": [
                     {
                         "start": s.start,
@@ -296,6 +298,9 @@ class Handler(BaseHTTPRequestHandler):
                         "peak_t": s.peak_t,
                         "peak_hhmmss": _fmt_hhmmss(s.peak_t),
                         "score": s.max_score,
+                        # A reranker logit means nothing on its own; hand the UI the
+                        # probability it maps to so it can show something readable.
+                        "relevance": relevance(s.max_score) if result.reranked else None,
                         "mean_score": s.mean_score,
                         "frame_count": s.frame_count,
                         "thumb": _media_url(video_id, s.peak_thumb),
@@ -856,8 +861,10 @@ function showSearchResult(data) {
     ? `${items.length} result(s) — 썸네일을 클릭하면 원본 프레임/클립을 볼 수 있습니다.`
     : '결과 없음.';
   renderCards(items.map((r, i) => ({
-    thumb: r.thumb, badge: !!r.clip, rank: `#${i + 1}`,
-    left: r.peak_hhmmss, right: r.score.toFixed(4),
+    thumb: r.thumb, badge: !!r.clip, rank: `#${i + 1}`, left: r.peak_hhmmss,
+    // The reranker's raw logit reads like a similarity and is not one, so show the
+    // relevance it maps to; without reranking the number is a cosine similarity.
+    right: r.relevance != null ? `${(r.relevance * 100).toFixed(0)}%` : r.score.toFixed(3),
   })));
 }
 

@@ -147,6 +147,9 @@ class IndexResult:
 @dataclass
 class SearchResult:
     segments: list[Segment]
+    # Which scale `Segment.max_score` is on: a reranker logit, or the embedder's cosine
+    # similarity when reranking was skipped. The two are not comparable.
+    reranked: bool = False
     timings: list[dict] = field(default_factory=list)
     total_seconds: float = 0.0
 
@@ -584,6 +587,7 @@ def run_search(
     log(f"  total: {sw.total:.2f}s")
     return SearchResult(
         segments=segments[: min(top, len(segments))],
+        reranked=not no_rerank and bool(segments),
         timings=sw.as_list(),
         total_seconds=sw.total,
     )

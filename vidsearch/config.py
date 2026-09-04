@@ -34,6 +34,12 @@ DEFAULT_JPEG_QUALITY = 3  # ffmpeg -q:v scale (2=high .. 31=low)
 
 DEFAULT_SCENE_THRESHOLD = 0.08
 
+# Qwen3-VL-Reranker is instruction-aware, and its default instruction is "Retrieve text
+# relevant to the user's query." — wrong for the frames and clips we hand it. Naming the
+# actual document type roughly doubled the gap between right and wrong results on a small
+# labeled set (sum of best-minus-worst score over 5 queries: 2.12 default -> 3.75 here).
+RERANK_INSTRUCTION = "Retrieve the video frame or clip that matches the user's query."
+
 DEFAULT_RECALL_TOP_M = 150
 DEFAULT_SEGMENT_GAP_SEC = 2.0
 DEFAULT_RERANK_TOP_SEGMENTS = 20
