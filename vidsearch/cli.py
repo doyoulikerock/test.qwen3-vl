@@ -105,7 +105,8 @@ def cmd_ask(args: argparse.Namespace) -> None:
 def cmd_web(args: argparse.Namespace) -> None:
     from . import web  # deferred: pulls in the HTML page and http.server machinery
 
-    web.serve(host=args.host, port=args.port, open_browser=args.open, videos_dir=args.videos)
+    web.serve(host=args.host, port=args.port, open_browser=args.open,
+              videos_dir=args.videos, model_idle=args.model_idle)
 
 
 def _segment_to_dict(s) -> dict:
@@ -214,6 +215,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_web.add_argument("--host", default="127.0.0.1")
     p_web.add_argument("--port", type=int, default=8000)
     p_web.add_argument("--open", action="store_true", help="open the UI in the default browser")
+    p_web.add_argument(
+        "--model-idle",
+        type=float,
+        default=600.0,
+        help="release loaded models after this many idle seconds (0 = keep them until exit). "
+             "They are kept between jobs so a repeated search reloads nothing; this stops an "
+             "idle server from holding the GPU indefinitely",
+    )
     p_web.add_argument(
         "--videos",
         default=None,

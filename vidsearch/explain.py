@@ -82,7 +82,18 @@ class Explainer:
             return_tensors="pt",
         ).to(self._model.device)
 
-        generated_ids = self._model.generate(**inputs, max_new_tokens=max_new_tokens)
+        # The checkpoint ships do_sample=true / repetition_penalty=1.0, which makes every
+        # answer a lottery: over five seeds on one clip this model answered in Chinese once,
+        # disagreed with itself about the subject's gender, and on the user's run fell into a
+        # loop that repeated one word until it hit the token budget. Describing frames is a
+        # factual task, so decode greedily — identical output run to run — with a light
+        # repetition penalty as the loop guard.
+        generated_ids = self._model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            repetition_penalty=config.EXPLAIN_REPETITION_PENALTY,
+        )
         trimmed = [
             out_ids[len(in_ids):]
             for in_ids, out_ids in zip(inputs["input_ids"], generated_ids)

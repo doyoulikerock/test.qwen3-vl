@@ -28,6 +28,20 @@ class IndexMissing(Exception):
     """Raised when the requested video has no frame index under data/."""
 
 
+def _is_degenerate(text: str, repeats: int = 5) -> bool:
+    """True when one word dominates the text, the signature of a decoding loop."""
+    words = text.split()
+    if len(words) < repeats * 2:
+        return False
+    top = max(set(words), key=words.count)
+    return words.count(top) >= repeats and words.count(top) / len(words) > 0.3
+
+
+def _needs_load(pool, kind: str) -> bool:
+    """Whether this run will actually pay for loading `kind` (no pool, or not resident yet)."""
+    return pool is None or not pool.is_loaded(kind)
+
+
 @dataclass
 class Stage:
     name: str
@@ -164,6 +178,7 @@ def run_index(
     describe: bool = True,
     log: Callable[[str], None] = print,
     report: Callable[[dict], None] | None = None,
+    pool=None,
 ) -> IndexResult:
     from . import media  # deferred: keeps `import pipeline` free of the ffmpeg helpers
 
@@ -183,13 +198,17 @@ def run_index(
     plan: list[tuple[str, float]] = [("clear index", 1), ("probe", 1)]
     if need_frames:
         plan += [("frame extract", 4), ("thumb extract", 3), ("scene detect", 3),
-                 ("torch import", 6), ("embedder load", 6), ("encode frames", 45),
-                 ("save index", 1)]
+                 ("torch import", 6 if pool is None else 1),
+                 ("embedder load", 6 if _needs_load(pool, "embedder") else 1),
+                 ("encode frames", 45), ("save index", 1)]
+    if need_clips:
+        plan += [("clip extract", 10),
+                 ("clip embedder load", 6 if _needs_load(pool, "embedder") else 1),
+                 ("encode clips", 30), ("save clip index", 1)]
+    # The summary runs last: its 4B model cannot share the card with the 2B embedder, so
+    # loading it any earlier would evict an embedder the clip pass still needs.
     if describe and need_frames:
         plan += [("explainer load", 8), ("describe", 12)]
-    if need_clips:
-        plan += [("clip extract", 10), ("clip embedder load", 6), ("encode clips", 30),
-                 ("save clip index", 1)]
     sw = Stopwatch(log, Progress(plan, report))
 
     # Carry the clip parameters forward when the clip index survives a frame-only rebuild —
@@ -231,14 +250,15 @@ def run_index(
         with sw.stage("torch import"):
             from .embedder import Embedder  # deferred: seconds on the first run of the process
 
-        embedder = Embedder()
         with sw.stage("embedder load"):
+            embedder = pool.embedder(log) if pool else Embedder()
             embedder.load()
         with sw.stage(f"encode frames ({len(frame_paths)})", "encode frames"):
             embeddings = _encode_chunked(embedder, [str(p) for p in frame_paths],
                                          batch_size, sw, log, "encoding frames")
-        with sw.stage("embedder release"):
-            embedder.release()
+        if pool is None:
+            with sw.stage("embedder release"):
+                embedder.release()
         log(f"  encoded {embeddings.shape}")
 
         with sw.stage("save index"):
@@ -269,11 +289,6 @@ def run_index(
         result.frames = len(frame_paths)
         log(f"Frame index saved to {out_dir}")
 
-        if describe:
-            desc = _describe(out_dir, [str(p) for p in frame_paths], sw, log)
-            if desc:
-                store.update_manifest(out_dir, {"description": desc})
-                result.description = desc
     elif store.index_exists(out_dir):
         log(f"Frame index already exists at {out_dir} — reusing")
 
@@ -295,14 +310,15 @@ def run_index(
             f"({'offline, cached' if offline else 'online, first download'}) and encoding clips ...")
         from .embedder import Embedder
 
-        embedder = Embedder()
         with sw.stage("embedder load", "clip embedder load"):
+            embedder = pool.embedder(log) if pool else Embedder()
             embedder.load()
         with sw.stage(f"encode clips ({len(clips)})", "encode clips"):
             clip_embeddings = _encode_chunked(embedder, [str(c["clip"]) for c in clips],
                                               clip_batch_size, sw, log, "encoding clips")
-        with sw.stage("embedder release"):
-            embedder.release()
+        if pool is None:
+            with sw.stage("embedder release"):
+                embedder.release()
         log(f"  encoded {clip_embeddings.shape}")
 
         with sw.stage("save clip index"):
@@ -327,6 +343,13 @@ def run_index(
             )
         result.clips = len(clips)
         log(f"Clip index saved to {out_dir}")
+
+
+    if describe and need_frames:
+        desc = _describe(out_dir, [str(p) for p in frame_paths], sw, log, pool)
+        if desc:
+            store.update_manifest(out_dir, {"description": desc})
+            result.description = desc
 
     log(f"  total: {sw.total:.2f}s")
     result.timings = sw.as_list()
@@ -371,7 +394,8 @@ def _rank_chunked(reranker, query: str, docs: list[str], sw: Stopwatch,
     return ranked
 
 
-def _describe(out_dir: Path, frame_paths: list[str], sw: Stopwatch, log: Callable[[str], None]) -> str | None:
+def _describe(out_dir: Path, frame_paths: list[str], sw: Stopwatch,
+              log: Callable[[str], None], pool=None) -> str | None:
     """Summarize the whole video in a sentence or two, for the dropdown tooltip.
 
     Skipped (rather than silently pulling ~8GB) when the explain model is not cached yet —
@@ -391,9 +415,10 @@ def _describe(out_dir: Path, frame_paths: list[str], sw: Stopwatch, log: Callabl
 
     from .explain import Explainer  # deferred: heavy torch/transformers import
 
-    explainer = Explainer()
+    explainer = None
     try:
         with sw.stage("explainer load"):
+            explainer = pool.explainer(log) if pool else Explainer()
             explainer.load()
         with sw.stage(f"describe ({len(sampled)} frames)", "describe"):
             answer, truncated = explainer.ask(
@@ -405,10 +430,18 @@ def _describe(out_dir: Path, frame_paths: list[str], sw: Stopwatch, log: Callabl
         log(f"  (설명 생성 실패: {type(e).__name__}: {e})")
         return None
     finally:
-        with sw.stage("explainer release"):
-            explainer.release()
+        # The 4B model cannot share the card with the 2B ones, so it is dropped even when
+        # pooled — keeping it would only force an eviction on the next search.
+        if explainer is not None:
+            with sw.stage("explainer release"):
+                pool.evict("explainer") if pool is not None else explainer.release()
 
     desc = " ".join(answer.split())
+    if _is_degenerate(desc):
+        # Greedy decoding plus a repetition penalty makes this rare, but a tooltip reading
+        # "빨간색 빨간색 빨간색 ..." is worse than no tooltip at all.
+        log(f"  (설명이 같은 표현을 반복해 버려서 저장하지 않습니다: {desc[:60]}...)")
+        return None
     if truncated:
         log(f"  (설명이 {config.DEFAULT_DESCRIBE_MAX_NEW_TOKENS} 토큰 제한에 걸려 끝이 잘렸습니다)")
     log(f"  description: {desc}")
@@ -429,21 +462,29 @@ def run_search(
     top: int = 10,
     log: Callable[[str], None] = print,
     report: Callable[[dict], None] | None = None,
+    pool=None,
 ) -> SearchResult:
     out_dir = store.video_data_dir(video_path)
     if not store.index_exists(out_dir):
         raise IndexMissing(f"No index at {out_dir}. Run `vidsearch index {video_path}` first.")
 
     use_motion = not no_motion and store.clip_index_exists(out_dir)
+    # A resident model turns its load phase into a no-op, so the plan must not reserve
+    # weight for it — otherwise the bar would stall at a phase that takes no time.
     plan: list[tuple[str, float]] = [
-        ("index load", 1), ("torch import", 8), ("embedder load", 22), ("query encode", 4),
-        ("embedder release", 1), ("frame scoring", 1),
+        ("index load", 1), ("torch import", 8 if pool is None else 1),
+        ("embedder load", 22 if _needs_load(pool, "embedder") else 1), ("query encode", 4),
     ]
+    if pool is None:
+        plan.append(("embedder release", 1))
+    plan.append(("frame scoring", 1))
     if use_motion:
         plan.append(("clip scoring", 1))
     plan.append(("segment merge", 1))
     if not no_rerank:
-        plan += [("reranker load", 18), ("rerank", 50), ("reranker release", 1)]
+        plan += [("reranker load", 18 if _needs_load(pool, "reranker") else 1), ("rerank", 50)]
+        if pool is None:
+            plan.append(("reranker release", 1))
     sw = Stopwatch(log, Progress(plan, report))
 
     with sw.stage("index load"):
@@ -461,18 +502,19 @@ def run_search(
     with sw.stage("torch import"):
         from .embedder import Embedder  # deferred: seconds on the first run of the process
 
-    embedder = Embedder()
     queries = [query]
     if bilingual and query_en:
         queries.append(query_en)
     log(f"Encoding quer{'ies' if len(queries) > 1 else 'y'}: {queries}")
 
     with sw.stage("embedder load"):
+        embedder = pool.embedder(log) if pool else Embedder()
         embedder.load()
     with sw.stage("query encode"):
         q_embs = [embedder.encode_query(q) for q in queries]
-    with sw.stage("embedder release"):
-        embedder.release()
+    if pool is None:
+        with sw.stage("embedder release"):
+            embedder.release()
 
     with sw.stage("frame scoring"):
         scores = np.max(np.stack([embeddings @ q for q in q_embs]), axis=0)
@@ -524,13 +566,14 @@ def run_search(
         # came from the motion channel — a frozen mid-stride pose reads as ambiguous to the
         # reranker (verified: a running frame scored 0.0/-0.19 alone vs 0.31 as its source clip).
         rerank_docs = [c.peak_clip if c.peak_clip else c.peak_frame for c in candidates]
-        reranker = Reranker()
         with sw.stage("reranker load"):
+            reranker = pool.reranker(log) if pool else Reranker()
             reranker.load()
         with sw.stage(f"rerank ({rerank_n} segments)", "rerank"):
             ranked = _rank_chunked(reranker, query, rerank_docs, sw, log)
-        with sw.stage("reranker release"):
-            reranker.release()
+        if pool is None:
+            with sw.stage("reranker release"):
+                reranker.release()
         order = [r["corpus_id"] for r in ranked]
         rerank_scores = {r["corpus_id"]: r["score"] for r in ranked}
         reranked = [candidates[i] for i in order]
@@ -556,15 +599,17 @@ def run_ask(
     max_new_tokens: int = config.DEFAULT_EXPLAIN_MAX_NEW_TOKENS,
     log: Callable[[str], None] = print,
     report: Callable[[dict], None] | None = None,
+    pool=None,
 ) -> AskResult:
     out_dir = store.video_data_dir(video_path)
     if not store.index_exists(out_dir):
         raise IndexMissing(f"No index at {out_dir}. Run `vidsearch index {video_path}` first.")
 
-    sw = Stopwatch(log, Progress([
-        ("index load", 1), ("frame sampling", 1), ("torch import", 8),
-        ("explainer load", 52), ("generate", 37), ("explainer release", 1),
-    ], report))
+    plan = [("index load", 1), ("frame sampling", 1), ("torch import", 8 if pool is None else 1),
+            ("explainer load", 52 if _needs_load(pool, "explainer") else 1), ("generate", 37)]
+    if pool is None:
+        plan.append(("explainer release", 1))
+    sw = Stopwatch(log, Progress(plan, report))
 
     with sw.stage("index load"):
         _, meta, manifest = store.load_index(out_dir)
@@ -598,15 +643,16 @@ def run_ask(
     with sw.stage("torch import"):
         from .explain import Explainer  # deferred: seconds on the first run of the process
 
-    explainer = Explainer()
     with sw.stage("explainer load"):
+        explainer = pool.explainer(log) if pool else Explainer()
         explainer.load()
     with sw.stage(f"generate ({len(frames)} frames)", "generate"):
         answer, truncated = explainer.ask(
             question, [f["frame"] for f in frames], max_new_tokens=max_new_tokens
         )
-    with sw.stage("explainer release"):
-        explainer.release()
+    if pool is None:
+        with sw.stage("explainer release"):
+            explainer.release()
 
     if truncated:
         log(f"  (답변이 max-new-tokens {max_new_tokens} 제한에 걸려 끝이 잘렸습니다 — 값을 올려 다시 물어보세요)")

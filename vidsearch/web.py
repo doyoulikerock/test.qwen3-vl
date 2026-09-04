@@ -25,6 +25,7 @@ from typing import Callable
 from urllib.parse import unquote, urlparse
 
 from . import config
+from .models import IdleEvictor, ModelPool
 from .pipeline import IndexMissing, find_videos, run_ask, run_index, run_search
 
 # Directory scanned for video files that are not indexed yet, so they can be picked from
@@ -35,9 +36,12 @@ _scan_dir: Path | None = None
 def _videos() -> list[dict]:
     return find_videos(_scan_dir)
 
-# Models are loaded per request and do not fit in VRAM twice over, so search/ask runs are
-# serialized; a second request simply waits its turn.
+# One job at a time: the models do not fit in VRAM twice over.
 _model_lock = threading.Lock()
+
+# Unlike the CLI, this process outlives a single job, so loaded models are kept for the next
+# one and only evicted to make room (see models.ModelPool).
+_pool = ModelPool()
 
 
 class Job:
@@ -123,6 +127,7 @@ class Job:
                 "result": self.result,
                 "progress": dict(self.progress),
                 "elapsed": elapsed,
+                "models": _pool.resident(),
             }
 
 
@@ -278,6 +283,7 @@ class Handler(BaseHTTPRequestHandler):
                 top=int(req.get("top") or 10),
                 log=log,
                 report=report,
+                pool=_pool,
             )
             return {
                 "video_path": video_path,
@@ -327,6 +333,7 @@ class Handler(BaseHTTPRequestHandler):
                 ),
                 log=log,
                 report=report,
+                pool=_pool,
             )
             return {
                 "video_path": video_path,
@@ -383,7 +390,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         def work(log, report) -> dict:
-            result = run_index(video_path, log=log, report=report, **opts)
+            result = run_index(video_path, log=log, report=report, pool=_pool, **opts)
             return {
                 "frames": result.frames,
                 "clips": result.clips,
@@ -1030,15 +1037,19 @@ def serve(
     port: int = 8000,
     open_browser: bool = False,
     videos_dir: str | Path | None = None,
+    model_idle: float = 600.0,
 ) -> None:
     global _scan_dir
     _scan_dir = Path(videos_dir).resolve() if videos_dir else Path.cwd()
+    IdleEvictor(_pool, model_idle, _model_lock).start()
 
     httpd = ThreadingHTTPServer((host, port), Handler)
     url = f"http://{host}:{port}/"
     print(f"vidsearch web UI on {url}  (Ctrl+C to stop)")
     print(f"  data root:  {config.DATA_ROOT}")
     print(f"  workspace:  {_scan_dir}")
+    print(f"  models:     kept loaded between jobs"
+          + (f", released after {model_idle:.0f}s idle" if model_idle > 0 else ", never released"))
     for v in _videos():
         if v["indexed"]:
             print(f"  - {v['id']}  {v['duration']:.0f}s{'  +motion' if v['has_motion'] else ''}")
